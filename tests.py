@@ -13,7 +13,7 @@ class TestGitHubCrawler(unittest.TestCase):
         self.search_type = "Repositories"
 
     @staticmethod
-    def _get_mock_html(links):
+    def _get_mock_html_search_result(links):
         mock_response = Mock()
         mock_html = '''
         <html>
@@ -32,6 +32,31 @@ class TestGitHubCrawler(unittest.TestCase):
 
         return mock_response
 
+    @staticmethod
+    def _get_mock_repo_page_with_languages(languages_str):
+        mock_response = Mock()
+        mock_html = '''
+                <html>
+                    <body>
+                    <div>
+                        <h2>Languages</h2>
+                        <span class="Progress">
+                '''
+
+        for language_str in languages_str:
+            mock_html += f'<span aria-label="{language_str}"></span>'
+
+        mock_html += '''
+                        </span>
+                    </div>
+                    </body>
+                </html>
+                '''
+        mock_response.text = mock_html.encode('utf-8')
+        mock_response.status_code = 200
+
+        return mock_response
+
     def test_wrong_search_type_raises_error(self):
         with self.assertRaises(Exception) as cm:
             GitHubCrawler(
@@ -42,7 +67,7 @@ class TestGitHubCrawler(unittest.TestCase):
 
         self.assertEqual(str(cm.exception), 'Unknown search_type: wrong-type')
 
-    @patch('crawler.crawler.requests.get')
+    @patch('crawler.parsers.requests.get')
     def test_raises_error_on_non_200_response(self, mock_get):
         mock_response = Mock()
         mock_response.status_code = 429
@@ -55,14 +80,17 @@ class TestGitHubCrawler(unittest.TestCase):
                 search_type=self.search_type
             ).search()
 
-        self.assertEqual(str(cm.exception), "Failed to fetch data. HTTP Status Code: 429")
+        self.assertEqual(str(cm.exception), "Failed to fetch repository data. HTTP Status Code: 429")
 
-    @patch('crawler.crawler.requests.get')
+    @patch('crawler.parsers.requests.get')
     def test_get_repositories(self, mock_get):
-        mock_get.return_value = self._get_mock_html((
+        mock_search_response = self._get_mock_html_search_result((
             '/atuldjadhav/DropBox-Cloud-Storage',
-            '/michealbalogun/Horizon-dashboard'
-        ))
+            '/michealbalogun/Horizon-dashboard'))
+        mock_repos_response = self._get_mock_repo_page_with_languages(
+            ['Python 97.3', 'Other 2.7'])
+
+        mock_get.side_effect = [mock_search_response, mock_repos_response]
 
         result = GitHubCrawler(
             keywords=self.keywords,
@@ -71,12 +99,15 @@ class TestGitHubCrawler(unittest.TestCase):
         ).search()
 
         self.assertEqual(result, [
-            {'url': 'http://github.com/atuldjadhav/DropBox-Cloud-Storage'},
-            {'url': 'http://github.com/michealbalogun/Horizon-dashboard'}])
+            {'extra': {'language_stats': {'Other': '2.7%', 'Python': '97.3%'},
+                       'owner': 'atuldjadhav'},
+             'url': 'https://github.com/atuldjadhav/DropBox-Cloud-Storage'},
+            {'extra': {'language_stats': {}, 'owner': 'michealbalogun'},
+             'url': 'https://github.com/michealbalogun/Horizon-dashboard'}])
 
-    @patch('crawler.crawler.requests.get')
+    @patch('crawler.parsers.requests.get')
     def test_get_issues(self, mock_get):
-        mock_get.return_value = self._get_mock_html((
+        mock_get.return_value = self._get_mock_html_search_result((
             '/altai/nova-billing/issues/1',
             '/sfPPP/openstack-note/issues/8'
         ))
@@ -88,12 +119,12 @@ class TestGitHubCrawler(unittest.TestCase):
         ).search()
 
         self.assertEqual(result, [
-            {'url': 'http://github.com/altai/nova-billing/issues/1'},
-            {'url': 'http://github.com/sfPPP/openstack-note/issues/8'}])
+            {'url': 'https://github.com/altai/nova-billing/issues/1'},
+            {'url': 'https://github.com/sfPPP/openstack-note/issues/8'}])
 
-    @patch('crawler.crawler.requests.get')
+    @patch('crawler.parsers.requests.get')
     def test_get_wikis(self, mock_get):
-        mock_get.return_value = self._get_mock_html((
+        mock_get.return_value = self._get_mock_html_search_result((
             '/vault-team/vault-website/wiki/Quick-installation-guide',
             '/escrevebastante/tongue/wiki/Home'
         ))
@@ -105,5 +136,5 @@ class TestGitHubCrawler(unittest.TestCase):
         ).search()
 
         self.assertEqual(result, [
-            {'url': 'http://github.com/vault-team/vault-website/wiki/Quick-installation-guide'},
-            {'url': 'http://github.com/escrevebastante/tongue/wiki/Home'}])
+            {'url': 'https://github.com/vault-team/vault-website/wiki/Quick-installation-guide'},
+            {'url': 'https://github.com/escrevebastante/tongue/wiki/Home'}])

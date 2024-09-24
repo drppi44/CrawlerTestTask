@@ -71,10 +71,12 @@ The result looks like:
 Name                  Stmts   Miss  Cover
 -----------------------------------------
 crawler/__init__.py       2      0   100%
-crawler/crawler.py       27      0   100%
-tests.py                 46      0   100%
+crawler/crawler.py       19      0   100%
+crawler/parsers.py       64      4    94%
+tests.py                 58      0   100%
 -----------------------------------------
-TOTAL                    75      0   100%
+TOTAL                   143      4    97%
+
 ```
 ## Notes
 The crawler only processes the first page of search results.

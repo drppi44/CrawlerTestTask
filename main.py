@@ -6,12 +6,11 @@ from crawler.crawler import GitHubCrawler
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-
 if __name__ == "__main__":
     input_data = {
-        "keywords": ["openstack", "nova", "css"],
+        "keywords": ["python", "nova", "css"],
         "proxies": [
-            "51.91.109.83:80",
+            "160.86.242.23:8080",
         ],
         "type": "Repositories"
     }
@@ -27,4 +26,4 @@ if __name__ == "__main__":
 
         logger.info(json.dumps(results, indent=4))
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        raise
